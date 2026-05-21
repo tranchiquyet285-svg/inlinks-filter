@@ -2,6 +2,7 @@ import io
 import re
 from collections import Counter
 
+import bcrypt
 import pandas as pd
 import streamlit as st
 
@@ -22,6 +23,42 @@ st.set_page_config(
     page_icon="🔗",
     layout="wide",
 )
+
+# ── ĐĂNG NHẬP ──────────────────────────────────────────────────
+
+def _check_password(username: str, password: str) -> bool:
+    users = st.secrets.get("users", {})
+    if username not in users:
+        return False
+    stored_hash = users[username].get("password", "")
+    try:
+        return bcrypt.checkpw(password.encode("utf-8"), stored_hash.encode("utf-8"))
+    except Exception:
+        return False
+
+
+def _login_page():
+    st.title("🔐 Đăng nhập")
+    st.caption("Liên hệ admin để được cấp tài khoản.")
+    with st.form("login_form"):
+        username = st.text_input("Tên đăng nhập")
+        password = st.text_input("Mật khẩu", type="password")
+        submitted = st.form_submit_button("Đăng nhập", use_container_width=True)
+        if submitted:
+            if _check_password(username, password):
+                st.session_state["logged_in"]  = True
+                st.session_state["username"]   = username
+                display = st.secrets["users"][username].get("name", username)
+                st.session_state["disp_name"]  = display
+                st.rerun()
+            else:
+                st.error("Sai tên đăng nhập hoặc mật khẩu.")
+
+
+# Chặn truy cập nếu chưa đăng nhập
+if not st.session_state.get("logged_in"):
+    _login_page()
+    st.stop()
 
 # ── CSS nhỏ để đẹp hơn ─────────────────────────────────────────
 st.markdown("""
@@ -51,6 +88,13 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+
+# ── Sidebar: thông tin user + logout ───────────────────────────
+with st.sidebar:
+    st.markdown(f"👤 **{st.session_state.get('disp_name', st.session_state.get('username', ''))}**")
+    if st.button("Đăng xuất", use_container_width=True):
+        st.session_state.clear()
+        st.rerun()
 
 # ── Header ──────────────────────────────────────────────────────
 st.title("🔗 Contextual Inlinks Filter")
