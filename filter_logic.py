@@ -16,26 +16,80 @@ from openpyxl.utils.dataframe import dataframe_to_rows
 
 
 # ══════════════════════════════════════════════════════════════════
-#  CẤU HÌNH — Chỉnh phần này cho từng website
+#  CẤU HÌNH — Universal (hoạt động trên mọi CMS/website)
 # ══════════════════════════════════════════════════════════════════
 
+# ── GIỮ: ít nhất 1 pattern phải khớp ──────────────────────────
 CONTEXTUAL_PATTERNS: list = [
-    r"[@/]id=['\"]tab-description['\"]",
+
+    # ── STRUCTURAL (universal — hoạt động trên mọi CMS) ──
+    # Link nằm trong <p> = editorial text, đúng với mọi website
+    r"/p(?:\[\d+\])?/a(?:\[\d+\])?$",
+    r"/p(?:\[\d+\])?/(?:strong|em|b|i|u|span|cite)(?:\[\d+\])?/a(?:\[\d+\])?$",
+    r"/p(?:\[\d+\])?/a(?:\[\d+\])?/(?:strong|em|b|span)(?:\[\d+\])?$",
+    # Link trong <li> chứa text (không phải nav)
+    r"/li(?:\[\d+\])?/p(?:\[\d+\])?/a(?:\[\d+\])?$",
+
+    # ── WORDPRESS / CLASSIC THEMES ──
     r"[@/]id=['\"]post-\d+['\"]",
+    r"@class=['\"][^'\"]*\bentry-content\b[^'\"]*['\"]",
+    r"@class=['\"][^'\"]*\bpost-content\b[^'\"]*['\"]",
+    r"@class=['\"][^'\"]*\bsingle-content\b[^'\"]*['\"]",
+    r"@class=['\"][^'\"]*\barticle-content\b[^'\"]*['\"]",
+    r"@class=['\"][^'\"]*\bthe-content\b[^'\"]*['\"]",
+    r"@class=['\"][^'\"]*\bcontent-area\b[^'\"]*['\"]",
+    r"@class=['\"][^'\"]*\bpage-content\b[^'\"]*['\"]",
+    r"/article(?:\[@[^\]]*\])?/",
+
+    # ── WOOCOMMERCE ──
+    r"[@/]id=['\"]tab-description['\"]",
+    r"@class=['\"][^'\"]*\bwoocommerce-Tabs-panel--description\b[^'\"]*['\"]",
+    r"@class=['\"][^'\"]*\bwoocommerce-product-details__short-description\b[^'\"]*['\"]",
+    r"@class=['\"][^'\"]*\bproduct-description\b[^'\"]*['\"]",
+
+    # ── CATEGORY / ARCHIVE DESCRIPTION ──
+    r"@class=['\"][^'\"]*\bterm-description\b[^'\"]*['\"]",
+    r"@class=['\"][^'\"]*\bcategory-description\b[^'\"]*['\"]",
+    r"@class=['\"][^'\"]*\barchive-description\b[^'\"]*['\"]",
+    r"@class=['\"][^'\"]*\btaxonomy-description\b[^'\"]*['\"]",
+
+    # ── POPULAR THEMES & PAGE BUILDERS ──
+    r"@class=['\"][^'\"]*\belementor-widget-text-editor\b[^'\"]*['\"]",
+    r"@class=['\"][^'\"]*\bwp-block-paragraph\b[^'\"]*['\"]",
+    r"@class=['\"][^'\"]*\bwp-block-list\b[^'\"]*['\"]",
+    r"@class=['\"][^'\"]*\brich-text\b[^'\"]*['\"]",
+
+    # ── XENANGPLUS.COM SPECIFIC (giữ lại để tương thích) ──
     r"^//body/div/main/article/",
     r"/main/div\[\d+\]/div/(?:p(?:\[\d+\])?|ul(?:\[\d+\])?|strong|span|em|b|h[1-6])(?:/|\[|$)",
 ]
 
+# ── LOẠI: không được khớp bất kỳ pattern nào ──────────────────
 EXCLUDE_PATTERNS: dict = {
-    r"[@/]id=['\"]tab-title-":            "tab-title (chuyển tab)",
-    r"[@/]id=['\"]products['\"]":         "grid sản phẩm liên quan",
-    r"@class=['\"]block['\"]":            "card sản phẩm (class=block)",
-    r"[@/]id=['\"]comments['\"]":         "khu vực comment",
-    r"[@/]id=['\"]login['\"]":            "trang đăng nhập",
-    r"[@/]id=['\"]backtoblog['\"]":       "link back-to-blog",
-    r"[@/]id=['\"]ez-toc-container['\"]": "mục lục TOC",
-    r"swiper-slide":                       "carousel/slider",
-    r"/table/tbody/":                      "bảng listing sản phẩm",
+    # Navigation & UI
+    r"[@/]id=['\"]tab-title-":                   "tab-title (chuyển tab)",
+    r"[@/]id=['\"]comments['\"]":                "khu vực comment",
+    r"[@/]id=['\"]respond['\"]":                 "form comment",
+    r"[@/]id=['\"]login['\"]":                   "trang đăng nhập",
+    r"[@/]id=['\"]backtoblog['\"]":              "link back-to-blog",
+    r"[@/]id=['\"]ez-toc-container['\"]":        "mục lục TOC",
+    r"@class=['\"][^'\"]*\btoc\b[^'\"]*['\"]":  "mục lục TOC (class)",
+    # Product grids & cards
+    r"[@/]id=['\"]products['\"]":                "grid sản phẩm (id=products)",
+    r"@class=['\"]block['\"]":                   "card sản phẩm (class=block)",
+    r"@class=['\"][^'\"]*\bproducts\b[^'\"]*['\"]": "grid sản phẩm (class)",
+    r"@class=['\"][^'\"]*\bwoocommerce-loop-product\b[^'\"]*['\"]": "card loop WooCommerce",
+    r"@class=['\"][^'\"]*\brelated\b[^'\"]*['\"]":  "sản phẩm liên quan",
+    # Sliders & carousels
+    r"swiper-slide":                              "carousel/slider",
+    r"@class=['\"][^'\"]*\bslider\b[^'\"]*['\"]": "slider",
+    r"@class=['\"][^'\"]*\bcarousel\b[^'\"]*['\"]": "carousel",
+    # Tables (product listings)
+    r"/table/tbody/":                             "bảng listing sản phẩm",
+    # Breadcrumb & pagination
+    r"@class=['\"][^'\"]*\bbreadcrumb\b[^'\"]*['\"]": "breadcrumb",
+    r"@class=['\"][^'\"]*\bpagination\b[^'\"]*['\"]": "pagination",
+    r"@class=['\"][^'\"]*\bpage-numbers\b[^'\"]*['\"]": "page numbers",
 }
 
 BUTTON_ANCHORS: frozenset = frozenset({
@@ -49,6 +103,7 @@ GROUP_COLORS: dict = {
     "Tab Mô tả sản phẩm": "DBEAFE",
     "Body bài viết":       "D1FAE5",
     "Mô tả category":      "FEF3C7",
+    "Paragraph link":      "E0F2FE",
     "Page content":        "FCE7F3",
     "Contextual (khác)":   "F3F4F6",
 }
@@ -106,15 +161,27 @@ def _is_button(anchor: str) -> bool:
 
 
 def classify_group(path: str) -> str:
+    # WooCommerce product description tab
     if re.search(r"[@/]id=['\"]tab-description['\"]", path, re.I):
         return "Tab Mô tả sản phẩm"
-    if (re.search(r"[@/]id=['\"]post-\d+['\"]", path, re.I)
-            and not re.search(r"[@/]id=['\"]comments['\"]", path, re.I)):
+    if re.search(r"woocommerce-Tabs-panel--description|product-description|woocommerce-product-details", path, re.I):
+        return "Tab Mô tả sản phẩm"
+    # WordPress post / page body
+    if re.search(r"[@/]id=['\"]post-\d+['\"]", path, re.I):
         return "Body bài viết"
-    if re.match(r"^//body/div/main/article/", path):
-        return "Page content"
-    if re.search(r"/main/div\[\d+\]/div/(?:p|ul|strong|span|em|b|h[1-6])", path, re.I):
+    if re.search(r"entry-content|post-content|single-content|article-content|the-content|page-content", path, re.I):
+        return "Body bài viết"
+    if re.search(r"/article(?:\[@[^\]]*\])?/", path, re.I):
+        return "Body bài viết"
+    # Category / archive description
+    if re.search(r"term-description|category-description|archive-description|taxonomy-description", path, re.I):
         return "Mô tả category"
+    # Structural: link trong paragraph
+    if re.search(r"/p(?:\[\d+\])?/(?:(?:strong|em|b|i|u|span|cite)(?:\[\d+\])?/)?a(?:\[\d+\])?$", path, re.I):
+        return "Paragraph link"
+    # Page builders
+    if re.search(r"elementor|wp-block|rich-text", path, re.I):
+        return "Body bài viết"
     return "Contextual (khác)"
 
 
