@@ -90,8 +90,9 @@ EXCLUDE_PATTERNS: dict = {
     r"swiper-slide":                              "carousel/slider",
     r"@class=['\"][^'\"]*\bslider\b[^'\"]*['\"]": "slider",
     r"@class=['\"][^'\"]*\bcarousel\b[^'\"]*['\"]": "carousel",
-    # Tables (product listings)
-    r"/table/tbody/":                             "bảng listing sản phẩm",
+    # Tables: KHÔNG exclude /table/tbody/ chung chung vì bảng giá trong mô tả
+    # category cũng dùng table. WooCommerce product loop dùng <ul>/<div class='products'>
+    # đã được bắt bởi các pattern class='products' phía trên.
     # Breadcrumb & pagination
     r"@class=['\"][^'\"]*\bbreadcrumb\b[^'\"]*['\"]": "breadcrumb",
     r"@class=['\"][^'\"]*\bpagination\b[^'\"]*['\"]": "pagination",
