@@ -140,6 +140,38 @@ with right:
 st.divider()
 
 
+# ── Survey: top id/class trong file ─────────────────────────────
+if stats["no_match"] > 0:
+    with st.expander(f"⚠️ {stats['no_match']:,} rows không khớp pattern — Xem id/class trong file để điều chỉnh"):
+        st.caption("Đây là các id và class xuất hiện trong cột Link Path. Dùng để xác định pattern contextual cho website này.")
+
+        if "Link Path" in df.columns:
+            all_paths = " ".join(df["Link Path"].dropna())
+            ids     = re.findall(r"@id=['\"]([^'\"]+)['\"]",    all_paths)
+            classes = re.findall(r"@class=['\"]([^'\"]+)['\"]", all_paths)
+            # fallback không có @
+            ids     += re.findall(r"(?<![a-z])id=['\"]([^'\"]+)['\"]",    all_paths)
+            classes += re.findall(r"(?<![a-z])class=['\"]([^'\"]+)['\"]", all_paths)
+
+            id_df  = pd.DataFrame(Counter(ids).most_common(40),  columns=["id",    "Số lần xuất hiện"])
+            cls_df = pd.DataFrame(Counter(classes).most_common(40), columns=["class", "Số lần xuất hiện"])
+
+            c1, c2 = st.columns(2)
+            with c1:
+                st.markdown("**Top 40 `@id`**")
+                st.dataframe(id_df,  hide_index=True, use_container_width=True, height=400)
+            with c2:
+                st.markdown("**Top 40 `@class`**")
+                st.dataframe(cls_df, hide_index=True, use_container_width=True, height=400)
+
+            st.info(
+                "👉 Tìm id/class tương ứng với **tab mô tả, body bài viết, mô tả category** "
+                "→ báo lại để cập nhật pattern cho website của bạn."
+            )
+
+st.divider()
+
+
 # ── Preview kết quả ─────────────────────────────────────────────
 if len(kept) > 0:
     st.subheader(f"Xem trước — {min(50, len(kept))} / {len(kept):,} rows")
