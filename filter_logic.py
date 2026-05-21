@@ -90,6 +90,14 @@ EXCLUDE_PATTERNS: dict = {
     r"@class=['\"][^'\"]*\bbreadcrumb\b[^'\"]*['\"]": "breadcrumb",
     r"@class=['\"][^'\"]*\bpagination\b[^'\"]*['\"]": "pagination",
     r"@class=['\"][^'\"]*\bpage-numbers\b[^'\"]*['\"]": "page numbers",
+    # Subcategory / topic navigation boxes (SEOSONA & similar)
+    r"@class=['\"][^'\"]*\bbox-subcategoryseo\b[^'\"]*['\"]": "box subcategory nav",
+    r"@class=['\"][^'\"]*\bbox-subcategor\b[^'\"]*['\"]":     "box subcategory nav",
+    # Divi / page builder layout blocks (id="section_123", id="col-456")
+    r"[@/]id=['\"]section_\d+['\"]":  "Divi section block",
+    r"[@/]id=['\"]col-\d+['\"]":      "Divi column block",
+    r"[@/]id=['\"]row-\d+['\"]":      "Divi row block",
+    r"[@/]id=['\"]module_\d+['\"]":   "Divi module block",
 }
 
 BUTTON_ANCHORS: frozenset = frozenset({
