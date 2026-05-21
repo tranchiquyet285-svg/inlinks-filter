@@ -27,7 +27,10 @@ CONTEXTUAL_PATTERNS: list = [
     r"/p(?:\[\d+\])?/a(?:\[\d+\])?$",
     r"/p(?:\[\d+\])?/(?:strong|em|b|i|u|span|cite)(?:\[\d+\])?/a(?:\[\d+\])?$",
     r"/p(?:\[\d+\])?/a(?:\[\d+\])?/(?:strong|em|b|span)(?:\[\d+\])?$",
-    # Link trong <li> chứa text (không phải nav)
+    # Link trực tiếp trong <li> (list trong body text)
+    r"/li(?:\[\d+\])?/a(?:\[\d+\])?$",
+    r"/li(?:\[\d+\])?/(?:strong|em|b|i|u|span)(?:\[\d+\])?/a(?:\[\d+\])?$",
+    # Link trong <li> chứa <p>
     r"/li(?:\[\d+\])?/p(?:\[\d+\])?/a(?:\[\d+\])?$",
 
     # ── WORDPRESS / CLASSIC THEMES ──
@@ -220,6 +223,47 @@ def apply_filter(df: pd.DataFrame) -> tuple:
     kept["Group"] = kept["Link Path"].apply(classify_group)
     stats["groups"] = Counter(kept["Group"])
     return kept, stats
+
+
+def debug_page(df: pd.DataFrame, url: str) -> pd.DataFrame:
+    """
+    Trả về tất cả link từ một URL (From chứa url),
+    kèm cột Kết_Quả cho biết GIỮ hay lý do bị loại.
+    Dùng để debug tại sao link bị lọc mất.
+    """
+    sub = df[df["From"].str.contains(url, case=False, na=False)].copy()
+    results = []
+    for _, row in sub.iterrows():
+        t      = row["Type"]
+        pos    = row["Link Position"]
+        anchor = row["Anchor Text"]
+        path   = row["Link Path"]
+
+        if t != "Hyperlink":
+            results.append(f"❌ Type={t!r}")
+        elif pos != "Content":
+            results.append(f"❌ Position={pos!r}")
+        elif not anchor:
+            results.append("❌ Anchor rỗng")
+        elif _is_button(anchor):
+            results.append(f"❌ Button: {anchor!r}")
+        else:
+            excl_reason = next(
+                (label for pat, label in EXCLUDE_PATTERNS.items()
+                 if re.search(pat, path, re.IGNORECASE)),
+                None,
+            )
+            if excl_reason:
+                results.append(f"❌ Loại: {excl_reason}")
+            elif not _matches_any(CONTEXTUAL_PATTERNS, path):
+                results.append("❌ Không khớp contextual")
+            else:
+                results.append(f"✅ GIỮ ({classify_group(path)})")
+
+    sub = sub.copy()
+    sub["Kết_Quả"] = results
+    cols = ["Kết_Quả", "To", "Anchor Text", "Link Path", "Link Position"]
+    return sub[[c for c in cols if c in sub.columns]]
 
 
 # ══════════════════════════════════════════════════════════════════

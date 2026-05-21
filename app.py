@@ -12,6 +12,7 @@ from filter_logic import (
     GROUP_COLORS,
     apply_filter,
     build_excel,
+    debug_page,
     normalise,
 )
 
@@ -210,6 +211,31 @@ else:
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
     st.caption("File Excel gồm: **Contextual Links** · **Theo From** · **Theo To (SEO)** · **Quy tắc & Thống kê**")
+
+
+# ── Debug: soi từng URL ─────────────────────────────────────────
+with st.expander("🔬 Debug — Soi link của 1 URL cụ thể"):
+    st.caption("Nhập URL để xem TẤT CẢ link từ trang đó: link nào được giữ, link nào bị loại và vì sao.")
+    debug_url = st.text_input("URL (hoặc một phần URL)", placeholder="https://happynuts.vn/qua-tet/")
+    if debug_url:
+        debug_df = debug_page(df, debug_url)
+        if len(debug_df) == 0:
+            st.warning(f"Không tìm thấy link nào từ URL chứa '{debug_url}'")
+        else:
+            kept_count    = debug_df["Kết_Quả"].str.startswith("✅").sum()
+            dropped_count = debug_df["Kết_Quả"].str.startswith("❌").sum()
+            st.markdown(f"**{len(debug_df)} links** từ URL này — ✅ Giữ: **{kept_count}** · ❌ Loại: **{dropped_count}**")
+            st.dataframe(
+                debug_df,
+                hide_index=True,
+                use_container_width=True,
+                column_config={
+                    "Kết_Quả":   st.column_config.TextColumn("Kết quả", width=220),
+                    "To":        st.column_config.LinkColumn("To", width=200),
+                    "Anchor Text": st.column_config.TextColumn("Anchor", width=150),
+                    "Link Path": st.column_config.TextColumn("Link Path", width=350),
+                },
+            )
 
 
 # ── Expander: xem quy tắc lọc ───────────────────────────────────
