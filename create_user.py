@@ -5,11 +5,9 @@ Tạo password hash để thêm user vào Streamlit Cloud Secrets.
 
 Cách dùng:
     python create_user.py
-
-Sau đó copy kết quả vào Streamlit Cloud → App settings → Secrets.
 """
 
-import bcrypt
+import hashlib
 
 
 def main():
@@ -17,11 +15,11 @@ def main():
     print("  Tạo tài khoản mới cho Inlinks Filter")
     print("=" * 50)
 
-    username    = input("Tên đăng nhập (không dấu, không space): ").strip()
-    display     = input("Tên hiển thị (vd: Nguyễn Văn A): ").strip()
-    password    = input("Mật khẩu: ").strip()
+    username = input("Tên đăng nhập (không dấu, không space): ").strip()
+    display  = input("Tên hiển thị (vd: Nguyễn Văn A): ").strip()
+    password = input("Mật khẩu: ").strip()
 
-    hashed = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+    hashed = hashlib.sha256(password.encode("utf-8")).hexdigest()
 
     print("\n✅ Thêm đoạn sau vào Streamlit Cloud Secrets:\n")
     print(f'[users.{username}]')

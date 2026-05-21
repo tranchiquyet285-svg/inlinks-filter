@@ -2,7 +2,7 @@ import io
 import re
 from collections import Counter
 
-import bcrypt
+import hashlib
 import pandas as pd
 import streamlit as st
 
@@ -31,10 +31,8 @@ def _check_password(username: str, password: str) -> bool:
     if username not in users:
         return False
     stored_hash = users[username].get("password", "")
-    try:
-        return bcrypt.checkpw(password.encode("utf-8"), stored_hash.encode("utf-8"))
-    except Exception:
-        return False
+    input_hash  = hashlib.sha256(password.encode("utf-8")).hexdigest()
+    return input_hash == stored_hash
 
 
 def _login_page():
