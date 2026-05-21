@@ -164,6 +164,24 @@ def normalise(df: pd.DataFrame) -> tuple:
 #  LOGIC LỌC
 # ══════════════════════════════════════════════════════════════════
 
+# Container nội dung "mạnh" — nếu link nằm trong đây thì bỏ qua
+# exclude patterns (ví dụ: bảng giá trong mô tả category vẫn được giữ)
+STRONG_CONTENT_PATTERNS: list = [
+    r"[@/]id=['\"]tab-description['\"]",
+    r"[@/]id=['\"]post-\d+['\"]",
+    r"@class=['\"][^'\"]*\bentry-content\b[^'\"]*['\"]",
+    r"@class=['\"][^'\"]*\bpost-content\b[^'\"]*['\"]",
+    r"@class=['\"][^'\"]*\bsingle-content\b[^'\"]*['\"]",
+    r"@class=['\"][^'\"]*\bthe-content\b[^'\"]*['\"]",
+    r"@class=['\"][^'\"]*\bterm-description\b[^'\"]*['\"]",
+    r"@class=['\"][^'\"]*\bcategory-description\b[^'\"]*['\"]",
+    r"@class=['\"][^'\"]*\barchive-description\b[^'\"]*['\"]",
+    r"@class=['\"][^'\"]*\btaxonomy-description\b[^'\"]*['\"]",
+    r"@class=['\"][^'\"]*\bwoocommerce-Tabs-panel--description\b[^'\"]*['\"]",
+    r"@class=['\"][^'\"]*\bwoocommerce-product-details__short-description\b[^'\"]*['\"]",
+]
+
+
 def _matches_any(patterns: Union[list, dict], text: str) -> bool:
     keys = patterns.keys() if isinstance(patterns, dict) else patterns
     return any(re.search(p, text, re.IGNORECASE) for p in keys)
@@ -198,14 +216,17 @@ def classify_group(path: str) -> str:
 
 
 def apply_filter(df: pd.DataFrame) -> tuple:
-    m_type    = df["Type"] == "Hyperlink"
-    m_pos     = df["Link Position"] == "Content"
-    m_anchor  = df["Anchor Text"] != ""
-    m_no_btn  = ~df["Anchor Text"].apply(_is_button)
-    m_no_excl = ~df["Link Path"].apply(lambda p: _matches_any(EXCLUDE_PATTERNS, p))
-    m_cx      = df["Link Path"].apply(lambda p: _matches_any(CONTEXTUAL_PATTERNS, p))
+    m_type       = df["Type"] == "Hyperlink"
+    m_pos        = df["Link Position"] == "Content"
+    m_anchor     = df["Anchor Text"] != ""
+    m_no_btn     = ~df["Anchor Text"].apply(_is_button)
+    # Link trong strong content container → bỏ qua exclude (bảng giá trong mô tả, v.v.)
+    m_strong     = df["Link Path"].apply(lambda p: _matches_any(STRONG_CONTENT_PATTERNS, p))
+    m_no_excl    = ~df["Link Path"].apply(lambda p: _matches_any(EXCLUDE_PATTERNS, p))
+    m_pass_excl  = m_no_excl | m_strong   # strong container overrides exclude
+    m_cx         = df["Link Path"].apply(lambda p: _matches_any(CONTEXTUAL_PATTERNS, p))
 
-    kept_mask = m_type & m_pos & m_anchor & m_no_btn & m_no_excl & m_cx
+    kept_mask = m_type & m_pos & m_anchor & m_no_btn & m_pass_excl & m_cx
 
     stats = {
         "total":         len(df),
@@ -213,8 +234,8 @@ def apply_filter(df: pd.DataFrame) -> tuple:
         "non_content":   int((m_type & ~m_pos).sum()),
         "empty_anchor":  int((m_type & m_pos & ~m_anchor).sum()),
         "button_anchor": int((m_type & m_pos & m_anchor & ~m_no_btn).sum()),
-        "excluded_path": int((m_type & m_pos & m_anchor & m_no_btn & ~m_no_excl).sum()),
-        "no_match":      int((m_type & m_pos & m_anchor & m_no_btn & m_no_excl & ~m_cx).sum()),
+        "excluded_path": int((m_type & m_pos & m_anchor & m_no_btn & ~m_pass_excl).sum()),
+        "no_match":      int((m_type & m_pos & m_anchor & m_no_btn & m_pass_excl & ~m_cx).sum()),
         "kept":          int(kept_mask.sum()),
         "groups":        Counter(),
     }
@@ -248,13 +269,16 @@ def debug_page(df: pd.DataFrame, url: str) -> pd.DataFrame:
         elif _is_button(anchor):
             results.append(f"❌ Button: {anchor!r}")
         else:
+            is_strong = _matches_any(STRONG_CONTENT_PATTERNS, path)
             excl_reason = next(
                 (label for pat, label in EXCLUDE_PATTERNS.items()
                  if re.search(pat, path, re.IGNORECASE)),
                 None,
             )
-            if excl_reason:
+            if excl_reason and not is_strong:
                 results.append(f"❌ Loại: {excl_reason}")
+            elif excl_reason and is_strong:
+                results.append(f"✅ GIỮ — strong container override ({excl_reason} bỏ qua)")
             elif not _matches_any(CONTEXTUAL_PATTERNS, path):
                 results.append("❌ Không khớp contextual")
             else:
