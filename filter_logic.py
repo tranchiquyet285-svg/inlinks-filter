@@ -60,9 +60,12 @@ CONTEXTUAL_PATTERNS: list = [
     r"@class=['\"][^'\"]*\brich-text\b[^'\"]*['\"]",
 
     # ── XENANGPLUS.COM SPECIFIC (giữ lại để tương thích) ──
-    r"^//body/div/main/article/",
     r"/main/div\[\d+\]/div/(?:p(?:\[\d+\])?|ul(?:\[\d+\])?|strong|span|em|b|h[1-6])(?:/|\[|$)",
 ]
+
+# LƯU Ý: Pattern /article/ đã bị xoá vì quá rộng — bắt nhầm sidebar/widget
+# nằm trong <article>. Link editorial thật sự luôn đi qua <p> tag,
+# đã được bắt bởi pattern /p/a$ phía trên.
 
 # ── LOẠI: không được khớp bất kỳ pattern nào ──────────────────
 EXCLUDE_PATTERNS: dict = {
@@ -178,8 +181,6 @@ def classify_group(path: str) -> str:
     if re.search(r"[@/]id=['\"]post-\d+['\"]", path, re.I):
         return "Body bài viết"
     if re.search(r"entry-content|post-content|single-content|article-content|the-content|page-content", path, re.I):
-        return "Body bài viết"
-    if re.search(r"/article(?:\[@[^\]]*\])?/", path, re.I):
         return "Body bài viết"
     # Category / archive description
     if re.search(r"term-description|category-description|archive-description|taxonomy-description", path, re.I):
