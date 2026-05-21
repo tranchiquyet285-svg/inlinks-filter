@@ -27,6 +27,9 @@ CONTEXTUAL_PATTERNS: list = [
     r"/p(?:\[\d+\])?/a(?:\[\d+\])?$",
     r"/p(?:\[\d+\])?/(?:strong|em|b|i|u|span|cite)(?:\[\d+\])?/a(?:\[\d+\])?$",
     r"/p(?:\[\d+\])?/a(?:\[\d+\])?/(?:strong|em|b|span)(?:\[\d+\])?$",
+    # Link trong <td> (bảng giá, bảng so sánh trong mô tả)
+    r"/td(?:\[\d+\])?/a(?:\[\d+\])?$",
+    r"/td(?:\[\d+\])?/(?:strong|em|b|span)(?:\[\d+\])?/a(?:\[\d+\])?$",
     # Link trực tiếp trong <li> (list trong body text)
     r"/li(?:\[\d+\])?/a(?:\[\d+\])?$",
     r"/li(?:\[\d+\])?/(?:strong|em|b|i|u|span)(?:\[\d+\])?/a(?:\[\d+\])?$",
